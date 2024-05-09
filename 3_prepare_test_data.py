@@ -126,7 +126,7 @@ def constructTestSample(bugId, indexId, targetfile, repodir, rootdir,startLineNo
     print(diagnosticMsg)
 
 
-    cmd = 'timeout 200 java -jar /path/to/perturbation-0.0.1-SNAPSHOT-jar-with-dependencies.jar '+targetfile+' test-'+startLineNo
+    cmd = 'timeout 200 java -jar /root/SelfAPR/perturbation_model/target/perturbation-0.0.1-SNAPSHOT-jar-with-dependencies.jar '+targetfile+' test-'+startLineNo
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     print(result)
     result = str(result)
@@ -261,7 +261,7 @@ if __name__ == '__main__':
     bugIds = ['Chart-26','Math-106','Lang-65','Cli-1','Closure-134','Codec-1','Mockito-38','Jsoup-1','JacksonDatabind-1','JacksonCore-1','Compress-1','Collections-25','Time-26','JacksonXml-1','Gson-1','Csv-1','JxPath-1']   
     bugNos = ['1-25','1-105','1-64','2-40','1-170','2-18','1-37','2-93','2-112','2-26','2-47','26-28','1-27','2-6','2-18','2-16','2-22',]
     
-    rootdir= '/path/to/SelfAPR'
+    rootdir= '/root/SelfAPR'
     repodir = rootdir+'/'
 
     for i in range(0,17):

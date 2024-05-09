@@ -139,7 +139,7 @@ if __name__ == '__main__':
 
     patchFromPath='./raw_results.csv'
     patchToPath='/results.csv'
-    repodir = '/path/to/SelfAPR'    
+    repodir = '/root/SelfAPR'    
 
 
     with open(patchFromPath,'r') as patchFile:
