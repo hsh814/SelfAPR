@@ -140,10 +140,16 @@ if __name__ == '__main__':
         with open(bug_representation_path+'/bugs.csv', 'w') as csvfile:
             csvfile.write('bugid\tpatch\tbuggy\tid\tbuglineNo\tremoveNo\tfilepath\n')
         
+        MAX_LOCATIONS = 40
+        
         with open(bug_representation_path+'/Ochiai.txt',"r") as fl:
             lines = fl.readlines()
             count=0
+            loc = 0
             for line in lines:
+                loc += 1
+                if loc > MAX_LOCATIONS:
+                    break
                 line = line.strip()
                 if line.startswith('#') or line == "":
                     continue
@@ -216,6 +222,6 @@ if __name__ == '__main__':
                         bugrep.write(sample_add+'\n')
                     with open(bug_representation_path+'/fl.csv','a') as bugrep:
                         source_file = buggy_class.replace(f"projects/{project}{bug}/", "")
-                        bugrep.write(f"{count - 1}\t{source_file}\t{buggy_line}\t{suspiciousness}\t{current_id.replace('_add', '_replace')}\treplace\t{diagnosis}\n")
-                        bugrep.write(f"{count}\t{source_file}\t{buggy_line}\t{suspiciousness}\t{current_id}\tadd\t{diagnosis}\n")
+                        bugrep.write(f"{count - 1}\t{loc}\t{source_file}\t{buggy_line}\t{suspiciousness}\t{current_id.replace('_add', '_replace')}\treplace\t{diagnosis}\n")
+                        bugrep.write(f"{count}\t{loc}\t{source_file}\t{buggy_line}\t{suspiciousness}\t{current_id}\tadd\t{diagnosis}\n")
 

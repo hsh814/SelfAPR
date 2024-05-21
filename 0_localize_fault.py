@@ -11,7 +11,7 @@ if __name__ == '__main__':
     if checkout:
         if os.path.exists("./projects/"+project+bug):
             os.system("rm -rf ./projects/"+project+bug)
-        os.makedirs("./projects")
+        os.makedirs("./projects", exist_ok=True)
         checkout_project="defects4j checkout -p " + project +" -v "+ bug+"b  -w ./projects/"+project+bug
         os.system(checkout_project)
     
