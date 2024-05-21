@@ -137,9 +137,10 @@ def getFailingTestDiagnostic(failingtest,program_path):
 
 if __name__ == '__main__':
 
-    patchFromPath='./raw_results.csv'
-    patchToPath='/results.csv'
-    repodir = '/root/SelfAPR'    
+    repodir = '/root/SelfAPR'
+    BUG_ID = sys.argv[1]
+    patchFromPath = f'd4j/{BUG_ID}/raw_results.csv'
+    patchToPath = f'd4j/{BUG_ID}/results.csv'
 
 
     with open(patchFromPath,'r') as patchFile:

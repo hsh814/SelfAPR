@@ -84,6 +84,21 @@ https://doi.org/10.5281/zenodo.6582348
 java -jar ./perturbation_model/target/perturbation-0.0.1-SNAPSHOT-jar-with-dependencies.jar Your/JAVA/FILE/PATH Options=SelfAPR|BugLab|test-'buggyLineNo'
 ```
 
+### Run SimAPR experiment
+```
+python3 0_localize_fault.py Chart_1
+python3 1_bug_representation.py Chart_1
+python3 2_test.py Chart_1
+python3 3_evaluate_patch.py Chart_1
+```
+`model_SelfAPR` is required by 2_test.py.
+You can download the trained model from [here](https://zenodo.org/records/7030141).
+Download `SelfAPR.tar.gz` and run
+```
+tar -xzvf SelfAPR.tar.gz
+cp -r SelfAPR/model_SelfAPR ./model_SelfAPR
+rm -r SelfAPR
+```
 
 
 ##  Code perturbation scripts

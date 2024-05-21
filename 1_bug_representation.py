@@ -13,7 +13,6 @@ def getDiagnosis(project,bug):
     if 'List of modified sources' in str(result):
         result=str(result).split('List of modified sources')[0]
     
-    print(result)
     resultLines = str(result).split('\\')
     for l in resultLines:
         if '-' in l and '::' in l and failingtest  in '':
@@ -51,7 +50,6 @@ def getDiagnosis_fromFL(test_path):
                 if diagnosis in "":
                     failingtest=l.split(",")[0]
                     failingtest=failingtest.split("#")[1]
-                    print(l)
                     diagnosis=l.split(",")[3]
                     if "at" in diagnosis:
                         diagnosis = diagnosis.split(" at")[0]
@@ -140,7 +138,7 @@ if __name__ == '__main__':
         
         print('failing_test_number: '+str(failing_test_number))
         with open(bug_representation_path+'/bugs.csv', 'w') as csvfile:
-            csvfile.write('bugid\tbuggy\tbuggy_class\tsuspiciousness\tbuggy_line\tendbuggycode\tfailing_test_number\taction\tpatch\n')
+            csvfile.write('bugid\tpatch\tbuggy\tid\tbuglineNo\tremoveNo\tfilepath\n')
         
         with open(bug_representation_path+'/Ochiai.txt',"r") as fl:
             lines = fl.readlines()
@@ -152,24 +150,21 @@ if __name__ == '__main__':
                 count=count+1
                 tokens = line.split("@")
                 suspiciousness = tokens[2]
+                if float(suspiciousness) <= suspiciousness_threshold:
+                    break
                 buggy_class = tokens[0]
                 buggy_class=buggy_class.replace(".","/").replace("$","/")
                 buggy_class=buggy_class+".java" 
                 buggy_line = tokens[1]
                 if os.path.exists("projects/"+project+bug+"/source/"+buggy_class):
-                    print("projects/"+project+bug+"/source/"+buggy_class)
                     buggy_class = "projects/"+project+bug+"/source/"+buggy_class
                 elif os.path.exists("projects/"+project+bug+"/src/java/"+buggy_class):
-                    print("projects/"+project+bug+"/src/java/"+buggy_class)
                     buggy_class = "projects/"+project+bug+"/src/java/"+buggy_class
                 elif os.path.exists("projects/"+project+bug+"/src/main/java/"+buggy_class):
-                    print("projects/"+project+bug+"/src/main/java/"+buggy_class)
                     buggy_class = "projects/"+project+bug+"/src/main/java/"+buggy_class
                 elif os.path.exists("projects/"+project+bug+"/gson/src/main/java/"+buggy_class):
-                    print("projects/"+project+bug+"/gson/src/main/java/"+buggy_class)
                     buggy_class = "projects/"+project+bug+"/gson/src/main/java/"+buggy_class
                 elif os.path.exists("projects/"+project+bug+"/src/"+buggy_class):
-                    print("projects/"+project+bug+"/src/"+buggy_class)
                     buggy_class = "projects/"+project+bug+"/src/"+buggy_class
                     
                 
@@ -195,24 +190,32 @@ if __name__ == '__main__':
                     
                     #representation of replace
                     if 'NullPointerException' in diagnosis:
-                        sample_replace='[BUG] [BUGGY] '+buggycode + diagnosis+ ' [CONTEXT] ' + contextcode_replace + meta.split('[VARIABLES]')[0]
+                        sample_replace=f'[BUG] {buggycode} [BUGGY] {buggycode} {diagnosis} [CONTEXT] ' + contextcode_replace + meta.split('[VARIABLES]')[0]
                     else:
-                        sample_replace='[BUG] [BUGGY] ' + buggycode + diagnosis+ ' [CONTEXT] ' + contextcode_replace + meta 
+                        sample_replace=f'[BUG] {buggycode} [BUGGY] {buggycode} {diagnosis} [CONTEXT] ' + contextcode_replace + meta 
                     sample_replace = sample_replace.replace('\r','').replace('\n','').replace('\t','').replace('  ',' ')
-                    
-                    sample_replace = str(count)+'\t'+sample_replace +'\t'+buggy_class+'\t'+suspiciousness+'\t'+buggy_line+'\t'+str(endbuggycode)+'\t'+str(failing_test_number)+'\t'+'replace'+'\t'  
-                        
+                    patch_code = '[PATCH] ' + buggycode
+                    current_id = f"{bug_id}_{count}_{buggy_line}_replace"
+                    # sample_replace = str(count)+'\t'+patch_code+'\t'+sample_replace+'\t'+current_id+'\t'+buggy_class+'\t'+suspiciousness+'\t'+buggy_line+'\t'+str(endbuggycode)+'\t'+str(failing_test_number)+'\t'+'replace'+'\t'  
+                    sample_replace = f"{count}\t{patch_code}\t{sample_replace}\t{current_id}\t{buggy_line}\t1\t{buggy_class}"
+
                     #representation of add
                     count+=1
                     if 'NullPointerException' in diagnosis:
                         sample_add='[BUG] [BUGGY] ' + diagnosis+ ' [CONTEXT] ' + contextcode_add + meta.split('[VARIABLES]')[0]
                     else:
                         sample_add='[BUG] [BUGGY] ' + diagnosis+ ' [CONTEXT] ' + contextcode_add + meta
-                        
+                    current_id = f"{bug_id}_{count}_{buggy_line}_add"
                     sample_add = sample_add.replace('\r','').replace('\n','').replace('\t','').replace('  ',' ')
-                    sample_add = str(count)+'\t'+sample_add +'\t'+buggy_class+'\t'+suspiciousness+'\t'+buggy_line+'\t'+str(endbuggycode)+'\t'+str(failing_test_number)+'\t'+'add'+'\t'
-                    
+                    # sample_add = str(count)+'\t'+patch_code+'\t'+sample_add+'\t'+current_id+'\t'+buggy_class+'\t'+suspiciousness+'\t'+buggy_line+'\t'+str(endbuggycode)+'\t'+str(failing_test_number)+'\t'+'add'+'\t'
+                    sample_add = f"{count}\t{patch_code}\t{sample_add}\t{current_id}\t{buggy_line}\t0\t{buggy_class}"
+
+                    print(f"done line {count // 2}: {buggy_class} {buggy_line} {suspiciousness}")
                     with open(bug_representation_path+'/bugs.csv','a') as bugrep:
                         bugrep.write(sample_replace+'\n')
                         bugrep.write(sample_add+'\n')
-                            
+                    with open(bug_representation_path+'/fl.csv','a') as bugrep:
+                        source_file = buggy_class.replace(f"projects/{project}{bug}/", "")
+                        bugrep.write(f"{count - 1}\t{source_file}\t{buggy_line}\t{suspiciousness}\t{current_id.replace('_add', '_replace')}\treplace\t{diagnosis}\n")
+                        bugrep.write(f"{count}\t{source_file}\t{buggy_line}\t{suspiciousness}\t{current_id}\tadd\t{diagnosis}\n")
+

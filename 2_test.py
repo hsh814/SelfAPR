@@ -42,14 +42,8 @@ def getBugName(bugid):
     
     return buginfo,startNo,removeNo,filepath
 
-
-
-
-
-
-
         
-def test( model, tokenizer, device, loader,epoch):
+def test(model, tokenizer, device, loader, bug_id):
     
     return_sequences = 50
     model.eval()
@@ -86,16 +80,11 @@ def test( model, tokenizer, device, loader,epoch):
                 
                 bugname,startNo,removeNo,filepath  = getBugName(bugid.item())
 
-                with open('./raw_results.csv', 'a') as csvfile:
+                with open(f'{SAVE_DIR}/raw_results.csv', 'a') as csvfile:
                     filewriter = csv.writer(csvfile, delimiter='\t',escapechar=' ',quoting=csv.QUOTE_NONE)
                    
                     for i in range(0,return_sequences):
                         filewriter.writerow([bugname, startNo,removeNo,filepath,preds[i],target])
-
-
-
-            
-                
 
 
 def getGeneratorDataLoader(filepatch,tokenizer,batchsize):
@@ -110,23 +99,21 @@ def getGeneratorDataLoader(filepatch,tokenizer,batchsize):
         'num_workers': 0
         }
 
-    dataset=df.sample(frac=1.0, random_state = SEED).reset_index(drop=True)
-    target_set = loader.GeneratorDataset(dataset, tokenizer, MAX_LEN, PATCH_LEN)
+    # dataset=df.sample(frac=1.0, random_state = SEED).reset_index(drop=True)
+    target_set = loader.GeneratorDataset(df, tokenizer, MAX_LEN, PATCH_LEN)
     target_loader = DataLoader(target_set, **params)
     return target_loader
 
 
-
-
-def run_test(epoch):
+def run_test(bug_id: str):
       
     for i in range(0,10):
-        gen = T5ForConditionalGeneration.from_pretrained('./model_SelfAPR_ALL/SelfAPR'+str(i+1),output_hidden_states=True)       
-        gen_tokenizer = T5Tokenizer.from_pretrained('./model_SelfAPR_ALL/SelfAPR'+str(i+1),truncation=True)
+        gen = T5ForConditionalGeneration.from_pretrained('./model_SelfAPR/SelfAPR'+str(i+1),output_hidden_states=True)       
+        gen_tokenizer = T5Tokenizer.from_pretrained('./model_SelfAPR/SelfAPR'+str(i+1),truncation=True)
         gen_tokenizer.add_tokens(['[PATCH]','[BUG]','{', '}','<','^','<=','>=','==','!=','<<','>>','[CE]','[FE]','[CONTEXT]','[BUGGY]','[CLASS]','[METHOD]','[RETURN_TYPE]','[VARIABLES]','[Delete]'])   
         gen = gen.to(device)       
         test_loader=getGeneratorDataLoader(TEST_PATH,gen_tokenizer,1)
-        test(gen, gen_tokenizer, device, test_loader, epoch+1)
+        test(gen, gen_tokenizer, device, test_loader, bug_id)
           
         
 if __name__ == '__main__':
@@ -137,9 +124,14 @@ if __name__ == '__main__':
     MAX_LEN = 384
     PATCH_LEN = 76 
     device = 'cuda' if cuda.is_available() else 'cpu'
-
-    TEST_PATH='./dataset/test.csv'
-        
-    run_test(0)
+    BUG_ID = sys.argv[1]
+    proj, bid = BUG_ID.split('_')
+    
+    TEST_PATH = os.path.join('repair_iteration', f"{proj}{bid}", "bugs.csv")
+    SAVE_DIR = os.path.join('d4j', BUG_ID)
+    os.system('rm -rf ' + SAVE_DIR)
+    os.makedirs(SAVE_DIR, exist_ok=True)
+    
+    run_test(BUG_ID)
 
 
