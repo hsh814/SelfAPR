@@ -1,1 +1,0 @@
-[BugLab_Wrong_Operator]^return getAnnotation ( acls )  == null;^24^^^^^22^25^return getAnnotation ( acls )  != null;^[CLASS] Annotated  [METHOD] hasAnnotation [RETURN_TYPE] <A   Class<A> acls [VARIABLES] boolean  Class  acls  

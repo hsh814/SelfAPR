@@ -1,1 +1,0 @@
-[BugLab_Argument_Swapping]^super ( contents, spec ) ;^30^^^^^29^31^super ( spec, contents ) ;^[CLASS] ContentBody  [METHOD] <init> [RETURN_TYPE] Map)   ContentBodySpec spec Object> contents [VARIABLES] ContentBodySpec  spec  boolean  Map  contents  

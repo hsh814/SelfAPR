@@ -1,1 +1,0 @@
-[BugLab_Variable_Misuse]^return this;^87^^^^^85^88^return deserializer;^[CLASS] BeanDeserializerModifier  [METHOD] modifyDeserializer [RETURN_TYPE] JsonDeserializer   DeserializationConfig config BeanDescription beanDesc JsonDeserializer<?> deserializer [VARIABLES] boolean  BeanDescription  beanDesc  DeserializationConfig  config  JsonDeserializer  deserializer  

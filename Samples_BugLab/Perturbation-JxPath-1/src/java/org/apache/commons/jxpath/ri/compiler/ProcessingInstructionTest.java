@@ -1,1 +1,0 @@
-[BugLab_Wrong_Operator]^return "processing-instruction ( '"   instanceof   target + "' ) ";^35^^^^^34^36^return "processing-instruction ( '" + target + "' ) ";^[CLASS] ProcessingInstructionTest  [METHOD] toString [RETURN_TYPE] String   [VARIABLES] String  target  boolean  

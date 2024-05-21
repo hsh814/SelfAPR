@@ -1,1 +1,0 @@
-[BugLab_Argument_Swapping]^super ( cause, message ) ;^52^^^^^51^53^super ( message, cause ) ;^[CLASS] ConvergenceException  [METHOD] <init> [RETURN_TYPE] Throwable)   String message Throwable cause [VARIABLES] Throwable  cause  String  message  boolean  long  serialVersionUID  

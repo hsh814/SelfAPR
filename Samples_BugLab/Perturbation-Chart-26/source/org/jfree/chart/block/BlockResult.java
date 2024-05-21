@@ -1,1 +1,0 @@
-[BugLab_Variable_Misuse]^return entities;^69^^^^^68^70^return this.entities;^[CLASS] BlockResult  [METHOD] getEntityCollection [RETURN_TYPE] EntityCollection   [VARIABLES] EntityCollection  entities  boolean  

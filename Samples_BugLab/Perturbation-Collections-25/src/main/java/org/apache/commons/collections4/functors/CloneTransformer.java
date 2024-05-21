@@ -1,1 +1,0 @@
-[BugLab_Wrong_Operator]^if  ( input != null )  {^66^^^^^65^70^if  ( input == null )  {^[CLASS] CloneTransformer  [METHOD] transform [RETURN_TYPE] T   final T input [VARIABLES] Transformer  INSTANCE  boolean  T  input  long  serialVersionUID  

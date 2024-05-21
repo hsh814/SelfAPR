@@ -1,3 +1,0 @@
-[BugLab_Variable_Misuse]^size = size;^25^^^^^24^27^size = keys.length;^[CLASS] FixedKeySet  [METHOD] <init> [RETURN_TYPE] String[])   String[] keys [VARIABLES] Set  set  String[]  keys  boolean  int  size  
-[BugLab_Argument_Swapping]^size = keys.length.length;^25^^^^^24^27^size = keys.length;^[CLASS] FixedKeySet  [METHOD] <init> [RETURN_TYPE] String[])   String[] keys [VARIABLES] Set  set  String[]  keys  boolean  int  size  
-[BugLab_Argument_Swapping]^size = keys;^25^^^^^24^27^size = keys.length;^[CLASS] FixedKeySet  [METHOD] <init> [RETURN_TYPE] String[])   String[] keys [VARIABLES] Set  set  String[]  keys  boolean  int  size  

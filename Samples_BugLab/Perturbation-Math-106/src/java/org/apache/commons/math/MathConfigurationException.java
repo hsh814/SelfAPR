@@ -1,1 +1,0 @@
-[BugLab_Argument_Swapping]^super ( throwable, message ) ;^52^^^^^49^53^super ( message, throwable ) ;^[CLASS] MathConfigurationException  [METHOD] <init> [RETURN_TYPE] Throwable)   String message Throwable throwable [VARIABLES] Throwable  throwable  String  message  boolean  long  serialVersionUID  

@@ -1,1 +1,0 @@
-[BugLab_Wrong_Operator]^if  ( map  >=  Unmodifiable )  {^61^^^^^60^67^if  ( map instanceof Unmodifiable )  {^[CLASS] UnmodifiableOrderedMap  [METHOD] unmodifiableOrderedMap [RETURN_TYPE] <K,V>   OrderedMap<? extends K, ? extends V> map [VARIABLES] long  serialVersionUID  OrderedMap  map  tmpMap  boolean  

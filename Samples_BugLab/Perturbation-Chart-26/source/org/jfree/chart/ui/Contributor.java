@@ -1,2 +1,0 @@
-[BugLab_Variable_Misuse]^this.name = email;^66^^^^^65^68^this.name = name;^[CLASS] Contributor  [METHOD] <init> [RETURN_TYPE] String)   String name String email [VARIABLES] String  email  name  boolean  
-[BugLab_Variable_Misuse]^this.email = name;^67^^^^^65^68^this.email = email;^[CLASS] Contributor  [METHOD] <init> [RETURN_TYPE] String)   String name String email [VARIABLES] String  email  name  boolean  

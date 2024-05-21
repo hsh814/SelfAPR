@@ -1,1 +1,0 @@
-[BugLab_Wrong_Operator]^return " href=\""  <<  urlText + "\"";^58^^^^^57^59^return " href=\"" + urlText + "\"";^[CLASS] StandardURLTagFragmentGenerator  [METHOD] generateURLFragment [RETURN_TYPE] String   String urlText [VARIABLES] boolean  String  urlText  

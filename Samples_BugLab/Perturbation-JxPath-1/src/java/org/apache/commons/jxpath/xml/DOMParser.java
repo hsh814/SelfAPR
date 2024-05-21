@@ -1,1 +1,0 @@
-[BugLab_Argument_Swapping]^return stream.newDocumentBuilder (  ) .parse ( factory ) ;^45^^^^^33^50^return factory.newDocumentBuilder (  ) .parse ( stream ) ;^[CLASS] DOMParser  [METHOD] parseXML [RETURN_TYPE] Object   InputStream stream [VARIABLES] DocumentBuilderFactory  factory  boolean  InputStream  stream  Exception  ex  

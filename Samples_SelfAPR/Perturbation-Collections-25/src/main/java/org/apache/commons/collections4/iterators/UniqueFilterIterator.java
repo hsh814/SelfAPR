@@ -1,1 +1,0 @@
-[P14_Delete_Statement]^^41^^^^^40^42^super ( iterator, UniquePredicate.uniquePredicate (  )  ) ;^[CLASS] UniqueFilterIterator  [METHOD] <init> [RETURN_TYPE] Iterator)   Iterator<? extends E> iterator [VARIABLES] boolean  Iterator  iterator  

@@ -1,1 +1,0 @@
-[BugLab_Argument_Swapping]^super ( cause, message ) ;^19^^^^^18^20^super ( message, cause ) ;^[CLASS] RuntimeJsonMappingException  [METHOD] <init> [RETURN_TYPE] JsonMappingException)   String message JsonMappingException cause [VARIABLES] boolean  JsonMappingException  cause  String  message  

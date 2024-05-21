@@ -1,1 +1,0 @@
-[P14_Delete_Statement]^^41^^^^^40^42^super ( new CamelCaseSeparatorNamingPolicy ( separatorString ) , new LowerCaseNamingPolicy (  )  ) ;^[CLASS] LowerCamelCaseSeparatorNamingPolicy  [METHOD] <init> [RETURN_TYPE] String)   String separatorString [VARIABLES] boolean  String  separatorString  

@@ -1,1 +1,0 @@
-[BugLab_Argument_Swapping]^return callPath.getCalls (  ) .get ( webServiceSpec ) ;^41^^^^^40^42^return webServiceSpec.getCalls (  ) .get ( callPath ) ;^[CLASS] WebServiceCallSpecProvider  [METHOD] get [RETURN_TYPE] WebServiceCallSpec   [VARIABLES] CallPath  callPath  WebServiceSpec  webServiceSpec  boolean  

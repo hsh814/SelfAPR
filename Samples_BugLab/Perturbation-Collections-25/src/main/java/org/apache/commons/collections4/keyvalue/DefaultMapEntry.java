@@ -1,1 +1,0 @@
-[BugLab_Argument_Swapping]^super ( value, key ) ;^39^^^^^38^40^super ( key, value ) ;^[CLASS] DefaultMapEntry  [METHOD] <init> [RETURN_TYPE] DefaultMapEntry(K,V)   final K key final V value [VARIABLES] boolean  V  value  K  key  

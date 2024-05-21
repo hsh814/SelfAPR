@@ -1,1 +1,0 @@
-[BugLab_Wrong_Operator]^if  ( value != null )  {^34^^^^^31^38^if  ( value == null )  {^[CLASS] BaseJsonNode  [METHOD] findPath [RETURN_TYPE] JsonNode   String fieldName [VARIABLES] boolean  JsonNode  value  String  fieldName  

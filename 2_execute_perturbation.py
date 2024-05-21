@@ -5,6 +5,7 @@ import sys, os, time, subprocess,fnmatch, shutil, csv,re, datetime
 
 def start(bugId,repodir,rootdir):
     projectPath=repodir+'/'+bugId
+    print(f"Start {bugId} {repodir} {projectPath}")
     traveProject(bugId, projectPath,repodir)
 
 def traveProject(bugId,projectPath,repodir):
@@ -86,7 +87,7 @@ def constructTrainSample(bugId,line,targetfile,repodir,diagnosticFlag,rootdir):
                         l='[BUGGY] '+curruptCode + ' [BUGGY] '
                     cxt+=l+' '
 
-
+    print("[mv] mv "+repodir+"/"+filename +"  "+originFile)
     os.system("mv "+repodir+"/"+filename +"  "+originFile)
     sample+='[BUG] [BUGGY] ' + curruptCode + diagnosticMsg+ ' [CONTEXT] ' + cxt +' '+'  '+ metaInfo
     sample = sample.replace('\t',' ').replace('\n',' ').replace('\r',' ').replace('  ',' ')
@@ -364,6 +365,7 @@ if __name__ == '__main__':
     bugIds = ['Lang-65','Chart-26','Math-106','Mockito-38','Time-26','Closure-134','Cli-1','Collections-25','Codec-1','Compress-1','Csv-1','Gson-1','JacksonCore-1','JacksonDatabind-1','JacksonXml-1','Jsoup-1','JxPath-1'] 
     rootdir= '/root/SelfAPR'
     repodir = rootdir+'/Samples_SelfAPR'
+    os.makedirs(repodir, exist_ok=True)
 
     for bugId in bugIds:
         project=bugId.split('-')[0]
@@ -371,6 +373,7 @@ if __name__ == '__main__':
 
         if os.path.exists(repodir+'/'+bugId):
             os.system('rm -rf '+repodir+'/'+bugId)
+            os.system(f'rm -f {repodir}/train-Perturbation-{bugId}.csv')
         os.system('defects4j checkout -p '+ str(project)+' -v '+str(bugNo)+'f   -w '+repodir+'/'+bugId)
 
         bugId = bugId.replace(project, "Perturbation-"+project)
