@@ -5,3 +5,5 @@ dataset/SelfAPR_Data/
 *-bak/
 .vscode/
 **/*.tar.gz
+projects/
+repair_iteration/
