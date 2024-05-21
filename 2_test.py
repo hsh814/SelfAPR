@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import numpy as np
 import pandas as pd
 import torch,sys
@@ -10,7 +11,7 @@ import loader
 import torch.autograd as autograd
 import csv
 import os, gc
-import sys, subprocess,fnmatch, shutil, csv,re, datetime
+import sys, subprocess,fnmatch, shutil, csv,re, datetime, time
 
 
 
@@ -43,7 +44,7 @@ def getBugName(bugid):
     return buginfo,startNo,removeNo,filepath
 
         
-def test(model, tokenizer, device, loader, bug_id):
+def test(model, tokenizer, device, loader, model_iter):
     
     return_sequences = 50
     model.eval()
@@ -59,6 +60,7 @@ def test(model, tokenizer, device, loader, bug_id):
                 mask = data['source_mask'].to(device, dtype = torch.long)
                 bugid = data['bugid'].to(device, dtype = torch.long)
                 print("====bugid===",bugid.item())
+                local_start_time = time.time()
 
 
                 generated_ids = model.generate(
@@ -72,6 +74,8 @@ def test(model, tokenizer, device, loader, bug_id):
                 num_return_sequences=return_sequences,
                 num_beam_groups = 1
                 )
+                
+                filter = set()
 
 
                 preds = [tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True) for g in generated_ids]
@@ -79,12 +83,18 @@ def test(model, tokenizer, device, loader, bug_id):
                 target = target[0]
                 
                 bugname,startNo,removeNo,filepath  = getBugName(bugid.item())
+                with open(LOG_FILE, "a") as f:
+                    f.write(f"[patch] [bug {bugname}] [line {startNo}] [file {filepath}] [time {time.time() - local_start_time}] [total {time.time() - START_TIME}] [model {model_iter}]\n")
 
                 with open(f'{SAVE_DIR}/raw_results.csv', 'a') as csvfile:
                     filewriter = csv.writer(csvfile, delimiter='\t',escapechar=' ',quoting=csv.QUOTE_NONE)
                    
                     for i in range(0,return_sequences):
-                        filewriter.writerow([bugname, startNo,removeNo,filepath,preds[i],target])
+                        patch = preds[i]
+                        if patch in filter:
+                            continue
+                        filter.add(patch)
+                        filewriter.writerow([bugname, startNo,removeNo,filepath,patch,target])
 
 
 def getGeneratorDataLoader(filepatch,tokenizer,batchsize):
@@ -113,7 +123,7 @@ def run_test(bug_id: str):
         gen_tokenizer.add_tokens(['[PATCH]','[BUG]','{', '}','<','^','<=','>=','==','!=','<<','>>','[CE]','[FE]','[CONTEXT]','[BUGGY]','[CLASS]','[METHOD]','[RETURN_TYPE]','[VARIABLES]','[Delete]'])   
         gen = gen.to(device)       
         test_loader=getGeneratorDataLoader(TEST_PATH,gen_tokenizer,1)
-        test(gen, gen_tokenizer, device, test_loader, bug_id)
+        test(gen, gen_tokenizer, device, test_loader, i)
           
         
 if __name__ == '__main__':
@@ -131,7 +141,11 @@ if __name__ == '__main__':
     SAVE_DIR = os.path.join('d4j', BUG_ID)
     os.system('rm -rf ' + SAVE_DIR)
     os.makedirs(SAVE_DIR, exist_ok=True)
-    
+    LOG_FILE = os.path.join(SAVE_DIR, 'log.txt')
+    START_TIME = time.time()
     run_test(BUG_ID)
+    END_TIME = time.time()
+    with open(LOG_FILE, 'a') as f:
+        f.write(f"[total] [time {END_TIME - START_TIME}]\n")
 
 
