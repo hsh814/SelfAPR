@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import sys, os, time, subprocess,fnmatch, shutil, csv,re, datetime
+import json
 import javalang
 import javalang.tree
 from typing import Tuple, List, Dict, Set
@@ -9,6 +10,8 @@ global_files = dict()
 cache = ("", "")
 cache_id = ""
 
+global_switch_info = dict()
+
 class PatchLoc:
     id: str
     rank: int
@@ -17,6 +20,7 @@ class PatchLoc:
     removed_lines: int
     fl_score: float
     function: dict
+
     def __init__(self, id: str, rank: int, file: str, line: int, removed_lines: int, fl_score: float, function: dict):
         self.id = id
         self.rank = rank
@@ -25,6 +29,14 @@ class PatchLoc:
         self.removed_lines = removed_lines
         self.fl_score = fl_score
         self.function = function
+
+    def get_location(self, patch_count: int) -> str:
+        file_name = self.file.split("/")[-1]
+        return f"{self.get_loc_dir(patch_count)}/{file_name}"
+
+    def get_loc_dir(self, patch_count: int) -> str:
+        return f"patch/{self.rank}/{patch_count}"
+
 
 def syntax_check(java: str) -> bool:
     try:
@@ -51,7 +63,7 @@ def get_end_line(node: javalang.tree.Node, lineid: int) -> int:
     if hasattr(node, 'children') and node.children is not None:
         for n in node.children:
             line = get_end_line(n, line)
-    return line
+    return line + 1
 
 
 def get_method_range(target: str, lineid: int) -> dict:
@@ -87,12 +99,40 @@ def get_method_range(target: str, lineid: int) -> dict:
     return { "function": "0no_function_found", "begin": lineid, "end": lineid }
 
 
-def executePatch(line_id: str, startNo: int, removedNo: int, fpath: str, predit: str, repodir: str, patch_count: int, total: int) -> bool:
+def add_patch(loc_id: str, patch: str, patch_count: str):
+    global global_id_to_fl, global_files, global_switch_info
+    meta = global_id_to_fl[loc_id]
+    location = meta.get_location(patch_count)
+    predit = patch
+    src = meta.file
+    method = f"{meta.function['function']}:{meta.function['begin']}-{meta.function['end']}"
+    line = loc_id
+    rules = global_switch_info["rules"]
+    if src not in rules:
+        rules[src] = dict()
+    if method not in rules[src]:
+        rules[src][method] = dict()
+    if line not in rules[src][method]:
+        rules[src][method][line] = list()
+    patch_info = {
+        "case": patch_count,
+        "location": location,
+        "code": predit,
+    }
+    rules[src][method][line].append(patch_info)
+    ranking = global_switch_info["ranking"]
+    ranking.append(location)
+
+
+def executePatch(line_id: str, startNo: int, removedNo: int, fpath: str, predit: str, patch_count: int, total: int) -> bool:
     # first checkout buggy project
     # os.system(f'defects4j checkout -p {projectId} -v {bugId}b -w {PATCH_DIR}')
     # keep a copy of the buggy file
-    filename = fpath.split('/')[-1]
-    patched_file = os.path.join(repodir, filename)
+    global global_id_to_fl, global_files
+    meta = global_id_to_fl[line_id]
+    save_dir = os.path.join(D4J_DIR, meta.get_loc_dir(patch_count))
+    os.makedirs(save_dir, exist_ok=True)
+    patched_file = os.path.join(D4J_DIR, meta.get_location(patch_count))
     endNo = startNo + removedNo
     global cache, cache_id
     if cache_id == line_id:
@@ -113,6 +153,7 @@ def executePatch(line_id: str, startNo: int, removedNo: int, fpath: str, predit:
     # apply patch
     patched = prev_file + predit + "\n" + post_file
     if syntax_check(patched):
+        add_patch(line_id, predit, patch_count)
         with open(patched_file, 'w') as f:
             f.write(patched)
         with open(os.path.join(D4J_DIR, "patches.log"), "a") as f:
@@ -241,9 +282,85 @@ def read_fl(file) -> Tuple[dict, dict]:
                     files[src] = f.readlines()
             func = get_method_range("".join(files[src]), int(line))
             id_to_fl[loc_id] = PatchLoc(loc_id, int(rank), src, int(line), int(removed_lines), float(fl_score), func)
-            
-                    
+
     return id_to_fl, files
+
+
+def add_tests(bugid: str, switch_info: dict) -> None:
+    proj = bugid.split("_")[0]
+    bid = bugid.split("_")[1]
+    build_dir = os.path.join("patch", bugid)
+    os.makedirs(build_dir, exist_ok=True)
+    gen_proj_cmd = f"defects4j checkout -p {proj} -v {bid}b -w {build_dir}"
+    gen_fixed_proj_cmd = f"defects4j checkout -p {proj} -v {bid}f -w {build_dir}f"
+    print("Generating project directory! " + gen_proj_cmd)
+    os.system(gen_proj_cmd)
+    os.system(gen_fixed_proj_cmd)
+    compile_fixed = f"defects4j compile -w {build_dir}f"
+    os.system(compile_fixed)
+    fix_test_cmd = ["defects4j", "test", "-w", build_dir + "f"]
+    test_proc = subprocess.Popen(fix_test_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    so, se = test_proc.communicate()
+    result_str = so.decode("utf-8")
+    err_str = se.decode("utf-8")
+    failed_tests = list()
+    for line in result_str.splitlines():
+        line = line.strip()
+        if line.startswith("Failing tests:"):
+            error_num = int(line.split(":")[1].strip())
+            continue
+        if line.startswith("-"):
+            ft = line.replace("-", "").strip()
+            failed_tests.append(ft)
+    tests_all_file = os.path.join(D4J_DIR, "tests.all")
+    tests_relevant_file = os.path.join(D4J_DIR, "tests.rel")
+    tests_trigger_file = os.path.join(D4J_DIR, "tests.trig")
+    gen_test_all_cmd = f"defects4j export -w {build_dir} -o {tests_all_file} -p tests.all"
+    os.system(gen_test_all_cmd)
+    gen_test_rel_cmd = f"defects4j export -w {build_dir} -o {tests_relevant_file} -p tests.relevant"
+    os.system(gen_test_rel_cmd)
+    gen_test_trig_cmd = f"defects4j export -w {build_dir} -o {tests_trigger_file} -p tests.trigger"
+    os.system(gen_test_trig_cmd)
+    # TODO: tests
+    failing_test_cases = list()
+    failed = dict()
+    passing_test_cases = list()
+    relevent_test_cases = list()
+    with open(tests_trigger_file, "r") as tf:
+        for line in tf.readlines():
+            test = line.strip()
+            failing_test_cases.append(test)
+    with open(tests_all_file, "r") as tf:
+        for line in tf.readlines():
+            test = line.strip()
+            passing_test_cases.append(test)
+    with open(tests_relevant_file, "r") as tf:
+        for line in tf.readlines():
+            test = line.strip()
+            relevent_test_cases.append(test)
+    switch_info["failing_test_cases"] = failing_test_cases
+    switch_info["passing_test_cases"] = passing_test_cases
+    switch_info["relevant_test_cases"] = relevent_test_cases
+    switch_info["failed_passing_tests"] = failed_tests
+
+
+def init_switch_info(bugid: str, id_to_fl: Dict[str, PatchLoc], files: Dict[str, List[str]]) -> dict:
+    switch_info = dict()
+    switch_info["project_name"] = bugid
+    add_tests(bugid, switch_info)
+    # priority
+    priority_list = list()
+    for loc_id in id_to_fl:
+        item = {
+            "file": id_to_fl[loc_id].file,
+            "line": id_to_fl[loc_id].line,
+            "score": id_to_fl[loc_id].fl_score,
+        }
+        priority_list.append(item)
+    switch_info["priority"] = priority_list
+    switch_info["rules"] = dict() # Should be converted into a list
+    switch_info["ranking"] = list()
+    return switch_info
 
 if __name__ == '__main__':
 
@@ -261,6 +378,7 @@ if __name__ == '__main__':
     os.system(f"rm -f {D4J_DIR}/patches.log")
     
     global_id_to_fl, global_files = read_fl(os.path.join("repair_iteration", f"{proj}{bid}", "fl.csv"))
+    global_switch_info = init_switch_info(BUG_ID, global_id_to_fl, global_files)
     patch_count = 0
     with open(patchFromPath,'r') as patchFile:
         patches = patchFile.readlines()
@@ -278,16 +396,38 @@ if __name__ == '__main__':
                 startNo = meta.line
                 removedNo = meta.removed_lines
                 path = meta.file
-                save_dir = os.path.join(D4J_DIR, "patch", str(meta.rank), str(patch_count))
-                os.makedirs(save_dir, exist_ok=True)
-
                 preditNoSpace = predit.replace(' ','').replace('\n','').replace('\r','').replace('[Delete]','')
-                exeresult = executePatch(loc_id, startNo, removedNo, path, predit, save_dir, patch_count, i)
+                exeresult = executePatch(loc_id, startNo, removedNo, path, predit, patch_count, i)
                 if exeresult:
                     patch_count += 1
             except (IndexError, RuntimeError, TypeError, NameError,FileNotFoundError) as e:
                 print(e)
-                
+    
+    # post process
+    rules = global_switch_info["rules"]
+    final_rules = list()
+    for src in rules:
+        methods = list()
+        for method in rules[src]:
+            line_objects = list()
+            for line in rules[src][method]:
+                patches = rules[src][method][line]
+                meta = global_id_to_fl[line]
+                line_object = { 
+                    "line": meta.line,
+                    "id": meta.rank,
+                    "fl_score": meta.fl_score,
+                    "file": meta.file,
+                    "cases": patches 
+                }
+                line_objects.append(line_object)
+            method_object = { "function": method, "lines": line_objects }
+            methods.append(method_object)
+        file_object = { "file": src, "functions": methods }
+        final_rules.append(file_object)
+    global_switch_info["rules"] = final_rules
+    with open(os.path.join(D4J_DIR, "switch-info.json"), "w") as f:
+        json.dump(global_switch_info, f, indent=2)
 
 
 
