@@ -86,6 +86,8 @@ java -jar ./perturbation_model/target/perturbation-0.0.1-SNAPSHOT-jar-with-depen
 
 ### Run SimAPR experiment
 ```
+conda env create --file env.yaml --name selfapr
+conda activate selfapr
 python3 0_localize_fault.py Chart_1
 python3 1_bug_representation.py Chart_1
 python3 2_test.py Chart_1
