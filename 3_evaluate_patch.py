@@ -3,8 +3,28 @@ import sys, os, time, subprocess,fnmatch, shutil, csv,re, datetime
 import javalang
 import javalang.tree
 from typing import Tuple, List, Dict, Set
-global_id_to_fl = dict()
+global_id_to_fl: Dict[str, 'PatchLoc'] = dict()
 global_files = dict()
+
+cache = ("", "")
+cache_id = ""
+
+class PatchLoc:
+    id: str
+    rank: int
+    file: str
+    line: int
+    removed_lines: int
+    fl_score: float
+    function: dict
+    def __init__(self, id: str, rank: int, file: str, line: int, removed_lines: int, fl_score: float, function: dict):
+        self.id = id
+        self.rank = rank
+        self.file = file
+        self.line = line
+        self.removed_lines = removed_lines
+        self.fl_score = fl_score
+        self.function = function
 
 def syntax_check(java: str) -> bool:
     try:
@@ -46,8 +66,7 @@ def get_method_range(target: str, lineid: int) -> dict:
         start_line = node.position.line
         end_line = get_end_line(node, start_line)
         if (start_line <= lineid + 1) and (end_line >= lineid + 1):
-            print("found it!")
-            print(f"{node.name} - {start_line}, {end_line}")
+            print(f"[method] [name {node.name}]  [line {start_line}, {end_line}]")
             method_range = { "function": node.name, "begin": start_line, "end": end_line }
             found_method = True
             break
@@ -59,8 +78,7 @@ def get_method_range(target: str, lineid: int) -> dict:
         start_line = node.position.line
         end_line = get_end_line(node, start_line)
         if (start_line <= lineid + 1) and (end_line >= lineid + 1):
-            print("found it!")
-            print(f"{node.name} - {start_line}, {end_line}")
+            print(f"[method] [name {node.name}]  [line {start_line}, {end_line}]")
             method_range = { "function": node.name, "begin": start_line, "end": end_line }
             found_method = True
             break
@@ -69,34 +87,43 @@ def get_method_range(target: str, lineid: int) -> dict:
     return { "function": "0no_function_found", "begin": lineid, "end": lineid }
 
 
-def executePatch(projectId,bugId,startNo,removedNo,fpath,predit,repodir):
+def executePatch(line_id: str, startNo: int, removedNo: int, fpath: str, predit: str, repodir: str, patch_count: int, total: int) -> bool:
     # first checkout buggy project
-    os.system(f'defects4j checkout -p {projectId} -v {bugId}b -w {PATCH_DIR}')
+    # os.system(f'defects4j checkout -p {projectId} -v {bugId}b -w {PATCH_DIR}')
     # keep a copy of the buggy file
-    originFile = os.path.join(PATCH_DIR, fpath)
-    filename = originFile.split('/')[-1]
-
-    os.system(f"cp {originFile} {repodir}")
-    newStr=''
-    endNo=int(startNo)+int(removedNo)
-    with open(originFile,'r') as of:
-        lines=of.readlines()
-        for i in range(0,len(lines)):
-            l=lines[i]
-            if i+1 < int(startNo):
-                newStr+=l 
-            if i+1 == int(startNo):
-                newStr+=predit+'\n'
-            if i+1 >= endNo:
-                newStr+=l
-    with open(originFile,'w') as wof:
-        wof.write(newStr)
-
-    exeresult = execute(projectId+bugId,repodir,originFile,repodir+'/'+projectId+bugId)
-        
-    os.system("mv "+repodir+"/"+filename +"  "+originFile)
-
-    return exeresult
+    filename = fpath.split('/')[-1]
+    patched_file = os.path.join(repodir, filename)
+    endNo = startNo + removedNo
+    global cache, cache_id
+    if cache_id == line_id:
+        prev_file = cache[0]
+        post_file = cache[1]
+    else:
+        prev_file = ""
+        post_file = ""
+        cache_id = line_id
+        contents = global_files[fpath]
+        for i in range(len(contents)):
+            line = contents[i]
+            if i + 1 < startNo:
+                prev_file += line
+            elif i + 1 >= endNo:
+                post_file += line
+        cache = (prev_file, post_file)
+    # apply patch
+    patched = prev_file + predit + "\n" + post_file
+    if syntax_check(patched):
+        with open(patched_file, 'w') as f:
+            f.write(patched)
+        with open(os.path.join(D4J_DIR, "patches.log"), "a") as f:
+            f.write(f"[patch] [lid {line_id}] [id {patch_count}] [path {patched_file}] [diff \"{predit}\"]\n")
+            print((f"[patch] [lid {line_id}] [id {patch_count}] [path {patched_file}] [diff \"{predit}\"]"))
+        return True
+    else:
+        with open(os.path.join(D4J_DIR, "patches.log"), "a") as f:
+            f.write(f"[synerr] [lid {line_id}] [id {total - patch_count}] [path {patched_file}] [diff \"{predit}\"] [syntax error]\n")
+            print(f"[synerr] [lid {line_id}] [id {total - patch_count}] [path {patched_file}] [diff \"{predit}\"]")
+        return False
 
 
 def execute(patchId,repodir,originFile,rootdir):
@@ -201,66 +228,65 @@ def read_fl(file) -> Tuple[dict, dict]:
         lines = f.readlines()
         for line in lines:
             tokens = line.strip().split("\t")
-            bid = tokens[0]
-            rank = tokens[1]
-            file = tokens[2]
-            line = tokens[3]
-            fl_score = tokens[4]
-            id = tokens[5]
-            if file not in files:
-                with open(os.path.join(PATCH_DIR, file), 'r', encoding='latin-1', errors='ignore') as f:
-                    files[file] = f.readlines()
-            func = get_method_range(files[file], int(line))
-            id_to_fl[id] = (bid, int(rank), file, int(line), float(fl_score), func)
+            loc_id = tokens[0]
+            bid = tokens[1]
+            rank = tokens[2]
+            removed_lines = tokens[3]
+            src = tokens[4]
+            line = tokens[5]
+            fl_score = tokens[6]
+            print(f"[fl] [id {loc_id}]")
+            if src not in files:
+                with open(os.path.join(PATCH_DIR, src), 'r', encoding='latin-1', errors='ignore') as f:
+                    files[src] = f.readlines()
+            func = get_method_range("".join(files[src]), int(line))
+            id_to_fl[loc_id] = PatchLoc(loc_id, int(rank), src, int(line), int(removed_lines), float(fl_score), func)
+            
                     
     return id_to_fl, files
 
 if __name__ == '__main__':
 
-    repodir = '/root/SelfAPR'
     BUG_ID = sys.argv[1]
+    proj, bid = BUG_ID.split('_')
     patchFromPath = f'd4j/{BUG_ID}/raw_results.csv'
     patchToPath = f'd4j/{BUG_ID}/results.csv'
     PATCH_DIR = os.path.join("patch", BUG_ID)
+    if not os.path.exists(PATCH_DIR):
+        # os.system(f'rm -rf {PATCH_DIR}')
+        os.makedirs("patch", exist_ok=True)
+        os.system(f'defects4j checkout -p {proj} -v {bid}b -w {PATCH_DIR}')
     D4J_DIR = os.path.join("d4j", BUG_ID)
-    os.makedirs("patch", exist_ok=True)
+    os.system(f'rm -rf {D4J_DIR}/patch')
+    os.system(f"rm -f {D4J_DIR}/patches.log")
     
-    global_id_to_fl, global_files = read_fl(os.path.join(D4J_DIR, "fl.csv"))
-
+    global_id_to_fl, global_files = read_fl(os.path.join("repair_iteration", f"{proj}{bid}", "fl.csv"))
+    patch_count = 0
     with open(patchFromPath,'r') as patchFile:
         patches = patchFile.readlines()
         # len(patches)
-        for i in range(1):
+        for i in range(len(patches)):
             try:
-                print(i)
                 patch=patches[i]
-                print(patch)
-                pid=patch.split('\t')[0]
-                projectId =pid.split('_')[0]
-                bugId =pid.split('_')[1]
-                startNo=patch.split('\t')[1]
-                removedNo=patch.split('\t')[2]
-                path=patch.split('\t')[3]
-                predit = patch.split('\t')[4]
-                groundtruth = patch.split('\t')[5]
-
-                print(patch)
-                print(projectId)
-                print(bugId)
+                tokens = patch.strip().split('\t')
+                loc_id = tokens[0]
+                predit = tokens[1]
+                # Read extra from metadata in repair_iteration/{BUG_ID}/fl.csv
+                meta = global_id_to_fl[loc_id]
+                projectId = proj
+                bugId = bid
+                startNo = meta.line
+                removedNo = meta.removed_lines
+                path = meta.file
+                save_dir = os.path.join(D4J_DIR, "patch", str(meta.rank), str(patch_count))
+                os.makedirs(save_dir, exist_ok=True)
 
                 preditNoSpace = predit.replace(' ','').replace('\n','').replace('\r','').replace('[Delete]','')
-                groundtruthNoSpace = groundtruth.replace(' ','').replace('\n','').replace('\r','').replace('[PATCH]','').replace('[Delete]','')
-                if groundtruthNoSpace in 'nan':
-                    groundtruthNoSpace=''
-                # if preditNoSpace in groundtruthNoSpace and groundtruthNoSpace in preditNoSpace:
-                #     with open(patchToPath,'a') as targetFile:
-                #         targetFile.write('Identical\t'+str(i)+'\t'+patch)
-                # else:
-                exeresult = executePatch(projectId,bugId,startNo,removedNo,path,predit,repodir)
-                with open(patchToPath,'a') as targetFile:
-                    targetFile.write(exeresult+'\t'+str(i)+'\t'+patch)
-            except (IndexError, RuntimeError, TypeError, NameError,FileNotFoundError):
-                print(RuntimeError)
+                exeresult = executePatch(loc_id, startNo, removedNo, path, predit, save_dir, patch_count, i)
+                if exeresult:
+                    patch_count += 1
+            except (IndexError, RuntimeError, TypeError, NameError,FileNotFoundError) as e:
+                print(e)
                 
 
 
