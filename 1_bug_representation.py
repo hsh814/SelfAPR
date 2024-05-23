@@ -129,6 +129,7 @@ if __name__ == '__main__':
         sys.exit()
     else:
         bug_representation_path="./repair_iteration/"+project+bug
+        os.system(f"rm -rf {bug_representation_path}")
         if not os.path.exists(bug_representation_path):
             os.system("mkdir -p "+bug_representation_path)
         os.system("cp "+FL_file + " "+bug_representation_path)
@@ -190,7 +191,8 @@ if __name__ == '__main__':
                     end_no =  results.split("endline:")[1].replace("\n","").replace("\r","")
                     
                     buggycode,contextcode_replace,contextcode_add,endbuggycode = getContext(buggy_class,buggy_line,start_no,end_no)
-                    endbuggycode=int(buggy_line)+int(endbuggycode)
+                    # endbuggycode=int(buggy_line)+int(endbuggycode)
+                    remove_lines = int(endbuggycode)
                     buggycode = buggycode.replace("  "," ")
                     buggycode = buggycode.replace("  "," ")
                     
@@ -201,9 +203,9 @@ if __name__ == '__main__':
                         sample_replace=f'[BUG] {buggycode} [BUGGY] {buggycode} {diagnosis} [CONTEXT] ' + contextcode_replace + meta 
                     sample_replace = sample_replace.replace('\r','').replace('\n','').replace('\t','').replace('  ',' ')
                     patch_code = '[PATCH] ' + buggycode
-                    current_id = f"{bug_id}_{count}_{buggy_line}_replace"
+                    current_id_rep = f"{bug_id}_{count}_{buggy_line}_replace"
                     # sample_replace = str(count)+'\t'+patch_code+'\t'+sample_replace+'\t'+current_id+'\t'+buggy_class+'\t'+suspiciousness+'\t'+buggy_line+'\t'+str(endbuggycode)+'\t'+str(failing_test_number)+'\t'+'replace'+'\t'  
-                    sample_replace = f"{count}\t{patch_code}\t{sample_replace}\t{current_id}\t{buggy_line}\t1\t{buggy_class}"
+                    sample_replace = f"{count}\t{patch_code}\t{sample_replace}\t{current_id_rep}\t{buggy_line}\t{remove_lines+1}\t{buggy_class}"
 
                     #representation of add
                     count+=1
@@ -211,10 +213,10 @@ if __name__ == '__main__':
                         sample_add='[BUG] [BUGGY] ' + diagnosis+ ' [CONTEXT] ' + contextcode_add + meta.split('[VARIABLES]')[0]
                     else:
                         sample_add='[BUG] [BUGGY] ' + diagnosis+ ' [CONTEXT] ' + contextcode_add + meta
-                    current_id = f"{bug_id}_{count}_{buggy_line}_add"
+                    current_id_add = f"{bug_id}_{count}_{buggy_line}_add"
                     sample_add = sample_add.replace('\r','').replace('\n','').replace('\t','').replace('  ',' ')
                     # sample_add = str(count)+'\t'+patch_code+'\t'+sample_add+'\t'+current_id+'\t'+buggy_class+'\t'+suspiciousness+'\t'+buggy_line+'\t'+str(endbuggycode)+'\t'+str(failing_test_number)+'\t'+'add'+'\t'
-                    sample_add = f"{count}\t{patch_code}\t{sample_add}\t{current_id}\t{buggy_line}\t0\t{buggy_class}"
+                    sample_add = f"{count}\t{patch_code}\t{sample_add}\t{current_id_add}\t{buggy_line}\t0\t{buggy_class}"
 
                     print(f"done line {count // 2}: {buggy_class} {buggy_line} {suspiciousness}")
                     with open(bug_representation_path+'/bugs.csv','a') as bugrep:
@@ -222,6 +224,6 @@ if __name__ == '__main__':
                         bugrep.write(sample_add+'\n')
                     with open(bug_representation_path+'/fl.csv','a') as bugrep:
                         source_file = buggy_class.replace(f"projects/{project}{bug}/", "")
-                        bugrep.write(f"{count - 1}\t{loc}\t{source_file}\t{buggy_line}\t{suspiciousness}\t{current_id.replace('_add', '_replace')}\treplace\t{diagnosis}\n")
-                        bugrep.write(f"{count}\t{loc}\t{source_file}\t{buggy_line}\t{suspiciousness}\t{current_id}\tadd\t{diagnosis}\n")
+                        bugrep.write(f"{current_id_rep}\t{count - 1}\t{loc}\t{remove_lines + 1}\t{source_file}\t{buggy_line}\t{suspiciousness}\treplace\n")
+                        bugrep.write(f"{current_id_add}\t{count}\t{loc}\t0\t{source_file}\t{buggy_line}\t{suspiciousness}\tadd\n")
 

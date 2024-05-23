@@ -94,7 +94,7 @@ def test(model, tokenizer, device, loader, model_iter):
                         if patch in filter:
                             continue
                         filter.add(patch)
-                        filewriter.writerow([bugname, startNo,removeNo,filepath,patch,target])
+                        filewriter.writerow([bugname, patch])
 
 
 def getGeneratorDataLoader(filepatch,tokenizer,batchsize):
@@ -105,7 +105,7 @@ def getGeneratorDataLoader(filepatch,tokenizer,batchsize):
 
     params = {
         'batch_size': batchsize,
-        'shuffle': True,
+        'shuffle': False,
         'num_workers': 0
         }
 
